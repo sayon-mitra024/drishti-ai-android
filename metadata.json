@@ -1,0 +1,6 @@
+{
+  "name": "Drishti AI",
+  "description": "Clinical-grade AI retinal screening and diabetic retinopathy assessment with on-device quality check, 5-class grading, and Grad-CAM explainability.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
