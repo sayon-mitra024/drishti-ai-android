@@ -1,26 +1,29 @@
 package com.example.ui.components
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AssignmentTurnedIn
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import com.example.model.DiabeticRetinopathyGrade
-import com.example.ui.theme.DrishtiPrimary
+import com.example.ui.theme.*
 
 @Composable
 fun ClinicianReviewDialog(
@@ -34,31 +37,36 @@ fun ClinicianReviewDialog(
     var selectedOverrideGrade by remember { mutableStateOf(initialGrade) }
     var clinicalNotes by remember { mutableStateOf("") }
 
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        NeoCard(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.88f)
                 .padding(vertical = 16.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            shapeRadius = 22.dp
         ) {
             Column(
                 modifier = Modifier
-                    .padding(20.dp)
+                    .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
+                // Header
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         modifier = Modifier
                             .size(36.dp)
-                            .background(DrishtiPrimary.copy(alpha = 0.15f), RoundedCornerShape(8.dp)),
+                            .clip(CircleShape)
+                            .background(DrishtiRoseSubtle),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.Default.AssignmentTurnedIn,
                             contentDescription = "Clinician Review",
-                            tint = DrishtiPrimary,
-                            modifier = Modifier.size(22.dp)
+                            tint = DrishtiBurgundy,
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                     Spacer(modifier = Modifier.width(10.dp))
@@ -67,24 +75,33 @@ fun ClinicianReviewDialog(
                             text = "Clinician Review & Sign-Off",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
+                            color = NeoInk
                         )
                         Text(
-                            text = "Formal clinical verification of AI screening",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                            text = "Professional clinical verification of AI screening",
+                            fontSize = 11.5.sp,
+                            color = NeoInkSoft
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
+                Divider(color = NeoBorder)
+                Spacer(modifier = Modifier.height(14.dp))
 
-                // Clinician Identity Inputs
+                // Inputs
                 OutlinedTextField(
                     value = clinicianName,
                     onValueChange = { clinicianName = it },
-                    label = { Text("Reviewing Clinician Name") },
+                    label = { Text("Reviewing Clinician Name", fontSize = 12.sp) },
                     singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = NeoSurfaceSunk,
+                        unfocusedContainerColor = NeoSurfaceSunk,
+                        focusedBorderColor = DrishtiBurgundy,
+                        unfocusedBorderColor = NeoBorder
+                    ),
+                    shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("clinician_name_input")
@@ -95,71 +112,96 @@ fun ClinicianReviewDialog(
                 OutlinedTextField(
                     value = registrationNo,
                     onValueChange = { registrationNo = it },
-                    label = { Text("Medical Council Registration / License #") },
+                    label = { Text("Medical Registration / License #", fontSize = 12.sp) },
                     singleLine = true,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = NeoSurfaceSunk,
+                        unfocusedContainerColor = NeoSurfaceSunk,
+                        focusedBorderColor = DrishtiBurgundy,
+                        unfocusedBorderColor = NeoBorder
+                    ),
+                    shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("clinician_reg_input")
                 )
 
-                Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(14.dp))
 
                 Text(
                     text = "Clinical Assessment Decision",
                     fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface
+                    fontSize = 12.5.sp,
+                    color = NeoInk
                 )
 
                 Spacer(modifier = Modifier.height(6.dp))
 
-                // Agreement Radio selection
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    onClick = { agreedWithAi = true },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (agreedWithAi) DrishtiRoseSubtle else NeoSurfaceSunk,
+                    border = BorderStroke(1.dp, if (agreedWithAi) DrishtiRoseBorder else NeoBorder),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    RadioButton(
-                        selected = agreedWithAi,
-                        onClick = { agreedWithAi = true },
-                        modifier = Modifier.testTag("agree_with_ai_radio")
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Agree with AI: ${initialGrade.shortName}",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = agreedWithAi,
+                            onClick = { agreedWithAi = true },
+                            colors = RadioButtonDefaults.colors(selectedColor = DrishtiBurgundy),
+                            modifier = Modifier.testTag("agree_with_ai_radio")
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Confirm AI Finding: ${initialGrade.shortName}",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = NeoInk
+                        )
+                    }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
+                Spacer(modifier = Modifier.height(8.dp))
+
+                Surface(
+                    onClick = { agreedWithAi = false },
+                    shape = RoundedCornerShape(10.dp),
+                    color = if (!agreedWithAi) DrishtiRoseSubtle else NeoSurfaceSunk,
+                    border = BorderStroke(1.dp, if (!agreedWithAi) DrishtiRoseBorder else NeoBorder),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    RadioButton(
-                        selected = !agreedWithAi,
-                        onClick = { agreedWithAi = false },
-                        modifier = Modifier.testTag("override_ai_radio")
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(
-                        text = "Override with clinician-graded diagnosis",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
+                    Row(
+                        modifier = Modifier.padding(10.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = !agreedWithAi,
+                            onClick = { agreedWithAi = false },
+                            colors = RadioButtonDefaults.colors(selectedColor = DrishtiBurgundy),
+                            modifier = Modifier.testTag("override_ai_radio")
+                        )
+                        Spacer(modifier = Modifier.width(6.dp))
+                        Text(
+                            text = "Modify / Override with Clinician Grade",
+                            fontSize = 12.5.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            color = NeoInk
+                        )
+                    }
                 }
 
-                // If overriding, show grade selector
                 if (!agreedWithAi) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(10.dp))
                     Text(
-                        text = "Select Overridden ICDR Grade:",
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "Select Clinical Diagnosis Grade:",
+                        fontSize = 11.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = NeoInkSoft
                     )
-                    Spacer(modifier = Modifier.height(4.dp))
+                    Spacer(modifier = Modifier.height(6.dp))
 
                     DiabeticRetinopathyGrade.entries.forEach { grade ->
                         Row(
@@ -170,7 +212,8 @@ fun ClinicianReviewDialog(
                         ) {
                             RadioButton(
                                 selected = selectedOverrideGrade == grade,
-                                onClick = { selectedOverrideGrade = grade }
+                                onClick = { selectedOverrideGrade = grade },
+                                colors = RadioButtonDefaults.colors(selectedColor = DrishtiBurgundy)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
@@ -185,14 +228,20 @@ fun ClinicianReviewDialog(
 
                 Spacer(modifier = Modifier.height(14.dp))
 
-                // Notes input
                 OutlinedTextField(
                     value = clinicalNotes,
                     onValueChange = { clinicalNotes = it },
-                    label = { Text("Clinical Notes & Referral Advice") },
-                    placeholder = { Text("E.g. Verified blot hemorrhages. Schedule dilated fundus examination and OCT.") },
+                    label = { Text("Clinical Notes & Recommendation", fontSize = 12.sp) },
+                    placeholder = { Text("E.g., Microaneurysms noted in superior arcade. Follow-up dilated exam recommended.", fontSize = 11.sp) },
                     minLines = 3,
-                    maxLines = 5,
+                    maxLines = 4,
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedContainerColor = NeoSurfaceSunk,
+                        unfocusedContainerColor = NeoSurfaceSunk,
+                        focusedBorderColor = DrishtiBurgundy,
+                        unfocusedBorderColor = NeoBorder
+                    ),
+                    shape = RoundedCornerShape(12.dp),
                     modifier = Modifier
                         .fillMaxWidth()
                         .testTag("clinician_notes_input")
@@ -200,16 +249,21 @@ fun ClinicianReviewDialog(
 
                 Spacer(modifier = Modifier.height(18.dp))
 
-                // Actions
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Cancel")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
+                    NeoSecondaryButton(
+                        text = "Cancel",
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    NeoPrimaryButton(
+                        text = "Sign & Save",
+                        icon = Icons.Default.Check,
                         onClick = {
                             onSubmitReview(
                                 clinicianName,
@@ -219,13 +273,10 @@ fun ClinicianReviewDialog(
                                 clinicalNotes.ifBlank { "Screening reviewed and approved by $clinicianName" }
                             )
                         },
-                        colors = ButtonDefaults.buttonColors(containerColor = DrishtiPrimary),
-                        modifier = Modifier.testTag("submit_review_button")
-                    ) {
-                        Icon(imageVector = Icons.Default.Check, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Sign & Record")
-                    }
+                        modifier = Modifier
+                            .weight(1.3f)
+                            .testTag("submit_review_button")
+                    )
                 }
             }
         }

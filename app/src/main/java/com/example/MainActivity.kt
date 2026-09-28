@@ -17,9 +17,13 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.ui.*
 import com.example.ui.components.ClinicalHeader
 import com.example.ui.components.ClinicianReviewDialog
+import com.example.ui.components.DrishtiBottomNav
+import com.example.ui.components.QrScannerDialog
 import com.example.ui.components.RecaptureGuidanceDialog
+import com.example.ui.components.ReportViewDialog
 import com.example.ui.screens.*
 import com.example.ui.theme.DrishtiTheme
+import com.example.ui.theme.NeoBg
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -48,6 +52,7 @@ fun DrishtiMainApp(
             ScreenStep.RESULTS -> viewModel.setStep(ScreenStep.CAPTURE)
             ScreenStep.HISTORY -> viewModel.setStep(ScreenStep.CAPTURE)
             ScreenStep.GUIDELINES -> viewModel.setStep(ScreenStep.CAPTURE)
+            ScreenStep.ABOUT -> viewModel.setStep(ScreenStep.CAPTURE)
             ScreenStep.CAPTURE -> { /* Root screen */ }
         }
     }
@@ -55,8 +60,7 @@ fun DrishtiMainApp(
     Scaffold(
         modifier = Modifier
             .fillMaxSize()
-            .statusBarsPadding()
-            .navigationBarsPadding(),
+            .statusBarsPadding(),
         topBar = {
             if (uiState.currentStep != ScreenStep.ANALYSIS_RUNNING) {
                 ClinicalHeader(
@@ -64,7 +68,17 @@ fun DrishtiMainApp(
                 )
             }
         },
-        containerColor = MaterialTheme.colorScheme.background
+        bottomBar = {
+            if (uiState.currentStep != ScreenStep.ANALYSIS_RUNNING &&
+                uiState.currentStep != ScreenStep.QUALITY_CHECK
+            ) {
+                DrishtiBottomNav(
+                    currentStep = uiState.currentStep,
+                    onNavigate = { step -> viewModel.setStep(step) }
+                )
+            }
+        },
+        containerColor = NeoBg
     ) { innerPadding ->
         Box(
             modifier = Modifier
@@ -119,6 +133,7 @@ fun DrishtiMainApp(
                             onDisplayModeChange = { viewModel.setGradCamDisplayMode(it) },
                             onToggleMarkers = { viewModel.toggleLesionMarkers() },
                             onOpenClinicianReview = { viewModel.showClinicianReviewDialog(true) },
+                            onViewReport = { viewModel.showReportForCurrentResult() },
                             onNewScreening = { viewModel.retakeImage() },
                             onViewHistory = { viewModel.setStep(ScreenStep.HISTORY) }
                         )
@@ -129,12 +144,21 @@ fun DrishtiMainApp(
                     HistoryScreen(
                         screenings = allScreenings,
                         onBack = { viewModel.setStep(ScreenStep.CAPTURE) },
-                        onDeleteScreening = { viewModel.deleteScreening(it) }
+                        onDeleteScreening = { viewModel.deleteScreening(it) },
+                        onOpenScreening = { viewModel.openStoredScreening(it) },
+                        onScanQr = { viewModel.showQrScannerDialog(true) },
+                        onViewReport = { viewModel.showReportForScreening(it) }
                     )
                 }
 
                 ScreenStep.GUIDELINES -> {
                     GuidelinesScreen(
+                        onBack = { viewModel.setStep(ScreenStep.CAPTURE) }
+                    )
+                }
+
+                ScreenStep.ABOUT -> {
+                    AboutScreen(
                         onBack = { viewModel.setStep(ScreenStep.CAPTURE) }
                     )
                 }
@@ -159,6 +183,21 @@ fun DrishtiMainApp(
                         viewModel.showRecaptureDialog(false)
                         viewModel.retakeImage()
                     }
+                )
+            }
+
+            // Formal Screening Report & QR Dialog
+            if (uiState.isReportDialogOpen && uiState.activeReport != null) {
+                ReportViewDialog(
+                    report = uiState.activeReport!!,
+                    onDismiss = { viewModel.dismissReportDialog() }
+                )
+            }
+
+            // Offline QR Scanner / Verification Dialog
+            if (uiState.isQrScannerDialogOpen) {
+                QrScannerDialog(
+                    onDismiss = { viewModel.showQrScannerDialog(false) }
                 )
             }
         }

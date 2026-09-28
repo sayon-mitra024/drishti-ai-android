@@ -41,4 +41,29 @@ class ExampleRobolectricTest {
         // A blank black bitmap will fail illumination / suitability
         assertEquals(QualityStatus.FAIL, result.overallStatus)
     }
+
+    @Test
+    fun `test CamGenerator mathematical calculation`() {
+        val features = FloatArray(com.example.engine.CamGenerator.FEATURE_CHANNELS * com.example.engine.CamGenerator.SPATIAL_SIZE) { 0.5f }
+        val weights = FloatArray(com.example.engine.CamGenerator.NUM_CLASSES * com.example.engine.CamGenerator.FEATURE_CHANNELS) { 1.0f }
+        val bitmap = com.example.engine.CamGenerator.computeCamBitmap(
+            features = features,
+            classifierWeights = weights,
+            classIndex = 2,
+            targetWidth = 100,
+            targetHeight = 100
+        )
+        assertNotNull(bitmap)
+        assertEquals(100, bitmap?.width)
+        assertEquals(100, bitmap?.height)
+    }
+
+    @Test
+    fun `test classifier weights asset exists and is valid`() {
+        val context = ApplicationProvider.getApplicationContext<Context>()
+        val input = context.assets.open("classifier_weights.bin")
+        val bytes = input.readBytes()
+        input.close()
+        assertEquals(25600, bytes.size)
+    }
 }

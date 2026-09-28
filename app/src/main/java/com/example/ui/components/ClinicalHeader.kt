@@ -22,68 +22,28 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.R
-import com.example.ui.theme.DrishtiPrimary
+import androidx.compose.ui.draw.shadow
+import com.example.ui.theme.*
 
 @Composable
 fun ClinicalHeader(
     modifier: Modifier = Modifier,
     onInfoClick: () -> Unit = {}
 ) {
-    Column(
+    Surface(
+        color = NeoSurface,
         modifier = modifier
             .fillMaxWidth()
-            .background(MaterialTheme.colorScheme.surface)
+            .shadow(elevation = 2.dp, ambientColor = NeoShadowDark, spotColor = NeoShadowDark)
+            .border(width = 1.dp, color = NeoBorder)
     ) {
-        // Research Prototype Regulatory Warning Ribbon
-        Surface(
-            color = Color(0xFFFDF2F3),
-            contentColor = Color(0xFF574142),
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .border(
-                    width = 1.dp,
-                    color = DrishtiPrimary.copy(alpha = 0.20f)
-                )
+                .padding(horizontal = Space16, vertical = Space12),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 7.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Shield,
-                    contentDescription = "Regulatory Notice",
-                    modifier = Modifier.size(13.dp),
-                    tint = DrishtiPrimary
-                )
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = "AI-assisted screening support tool • Not a diagnostic device • Qualified clinical oversight required",
-                    fontSize = 10.5.sp,
-                    fontWeight = FontWeight.Medium,
-                    textAlign = TextAlign.Center,
-                    color = Color(0xFF574142),
-                    lineHeight = 13.sp
-                )
-            }
-        }
-
-        // Main App Bar with Official Drishti Branding
-        Surface(
-            color = MaterialTheme.colorScheme.surface,
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(width = 1.dp, color = Color(0xFFEAE7E7))
-        ) {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     modifier = Modifier.weight(1f)

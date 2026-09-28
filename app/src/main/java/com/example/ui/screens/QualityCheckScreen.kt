@@ -26,8 +26,11 @@ import androidx.compose.ui.unit.sp
 import com.example.model.PatientInfo
 import com.example.model.QualityCheckResult
 import com.example.model.QualityStatus
-import com.example.ui.components.QualityMetricCard
-import com.example.ui.theme.DrishtiPrimary
+import com.example.ui.components.NeoCard
+import com.example.ui.components.NeoPrimaryButton
+import com.example.ui.components.NeoSecondaryButton
+import com.example.ui.components.NeoSunkWell
+import com.example.ui.theme.*
 
 @Composable
 fun QualityCheckScreen(
@@ -40,35 +43,49 @@ fun QualityCheckScreen(
     modifier: Modifier = Modifier
 ) {
     if (qualityResult == null || bitmap == null) {
-        Box(modifier = modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            CircularProgressIndicator(color = DrishtiPrimary)
+        Box(
+            modifier = modifier
+                .fillMaxSize()
+                .background(NeoBg),
+            contentAlignment = Alignment.Center
+        ) {
+            CircularProgressIndicator(color = DrishtiBurgundy)
         }
         return
     }
 
     val overallColor = when (qualityResult.overallStatus) {
-        QualityStatus.PASS -> Color(0xFF10B981)
-        QualityStatus.WARNING -> Color(0xFFF59E0B)
-        QualityStatus.FAIL -> Color(0xFFEF4444)
+        QualityStatus.PASS -> Grade0Color
+        QualityStatus.WARNING -> Grade2Color
+        QualityStatus.FAIL -> Grade3Color
     }
+
+    val overallBg = when (qualityResult.overallStatus) {
+        QualityStatus.PASS -> Grade0Bg
+        QualityStatus.WARNING -> Grade2Bg
+        QualityStatus.FAIL -> Grade3Bg
+    }
+
+    val canProceed = qualityResult.overallStatus != QualityStatus.FAIL
 
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF090607))
+            .background(NeoBg)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(horizontal = Space16, vertical = Space16)
     ) {
-        // Patient & Eye Context Header
+        // Patient Header Bar
         Surface(
-            shape = RoundedCornerShape(10.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
+            shape = RoundedCornerShape(12.dp),
+            color = NeoSurface,
+            border = BorderStroke(1.dp, NeoBorder),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                    .padding(horizontal = Space16, vertical = Space12),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
@@ -76,186 +93,267 @@ fun QualityCheckScreen(
                     Icon(
                         imageVector = Icons.Default.Person,
                         contentDescription = null,
-                        tint = DrishtiPrimary,
+                        tint = DrishtiBurgundy,
                         modifier = Modifier.size(16.dp)
                     )
-                    Spacer(modifier = Modifier.width(6.dp))
+                    Spacer(modifier = Modifier.width(Space8))
                     Text(
                         text = "${patientInfo.fullName} (${patientInfo.patientId})",
                         style = MaterialTheme.typography.bodyMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = NeoInk
                     )
                 }
 
                 Surface(
                     shape = RoundedCornerShape(6.dp),
-                    color = DrishtiPrimary.copy(alpha = 0.2f),
-                    contentColor = DrishtiPrimary
+                    color = DrishtiRoseSubtle,
+                    border = BorderStroke(1.dp, DrishtiRoseBorder)
                 ) {
                     Text(
-                        text = "Eye: ${patientInfo.eyeSide.name}",
+                        text = "EYE: ${patientInfo.eyeSide.name}",
                         fontSize = 11.sp,
                         fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        color = DrishtiBurgundy,
+                        modifier = Modifier.padding(horizontal = Space8, vertical = Space4)
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(Space16))
 
-        // Image Preview & Overall Status Badge
-        Card(
+        // Retinal Image Frame Card
+        NeoCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = BorderStroke(1.5.dp, overallColor.copy(alpha = 0.5f))
+            contentPadding = PaddingValues(Space16)
         ) {
-            Column(modifier = Modifier.padding(12.dp)) {
+            NeoSunkWell(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(210.dp),
+                shapeRadius = 14.dp,
+                backgroundColor = Color.Black,
+                borderColor = NeoBorderStrong
+            ) {
+                Image(
+                    bitmap = bitmap.asImageBitmap(),
+                    contentDescription = "Captured Retinal Image",
+                    contentScale = ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(Space16))
+
+        // Quality Status Banner Card
+        NeoCard(
+            modifier = Modifier.fillMaxWidth(),
+            backgroundColor = overallBg,
+            borderColor = overallColor.copy(alpha = 0.5f),
+            contentPadding = PaddingValues(Space16)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .height(210.dp)
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Color.Black),
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(overallColor.copy(alpha = 0.2f)),
                     contentAlignment = Alignment.Center
                 ) {
-                    Image(
-                        bitmap = bitmap.asImageBitmap(),
-                        contentDescription = "Fundus Preview",
-                        contentScale = ContentScale.Fit,
-                        modifier = Modifier.fillMaxSize()
+                    Icon(
+                        imageVector = when (qualityResult.overallStatus) {
+                            QualityStatus.PASS -> Icons.Default.CheckCircle
+                            QualityStatus.WARNING -> Icons.Default.Warning
+                            QualityStatus.FAIL -> Icons.Default.Dangerous
+                        },
+                        contentDescription = null,
+                        tint = overallColor,
+                        modifier = Modifier.size(22.dp)
                     )
-
-                    // Overlay badge
-                    Surface(
-                        shape = RoundedCornerShape(8.dp),
-                        color = overallColor.copy(alpha = 0.92f),
-                        contentColor = Color.White,
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(10.dp)
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            val icon = when (qualityResult.overallStatus) {
-                                QualityStatus.PASS -> Icons.Default.CheckCircle
-                                QualityStatus.WARNING -> Icons.Default.Warning
-                                QualityStatus.FAIL -> Icons.Default.Cancel
-                            }
-                            Icon(imageVector = icon, contentDescription = null, modifier = Modifier.size(15.dp))
-                            Spacer(modifier = Modifier.width(6.dp))
-                            Text(
-                                text = when (qualityResult.overallStatus) {
-                                    QualityStatus.PASS -> "IMAGE QUALITY PASSED"
-                                    QualityStatus.WARNING -> "QUALITY REVIEW ADVISED"
-                                    QualityStatus.FAIL -> "QUALITY REJECTED"
-                                },
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black
-                            )
-                        }
-                    }
                 }
 
-                Spacer(modifier = Modifier.height(10.dp))
+                Spacer(modifier = Modifier.width(Space12))
 
-                // Guidance summary text
-                Text(
-                    text = qualityResult.guidanceMessages.firstOrNull() ?: "Image satisfies clinical screening standards.",
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    fontWeight = FontWeight.Medium,
-                    lineHeight = 16.sp
-                )
+                Column {
+                    Text(
+                        text = "Image Quality: ${qualityResult.overallStatus.name}",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = overallColor
+                    )
+                    Text(
+                        text = when (qualityResult.overallStatus) {
+                            QualityStatus.PASS -> "All clinical metrics passed. Image is optimal for inference."
+                            QualityStatus.WARNING -> "Minor focus or illumination variance. Acceptable for screening."
+                            QualityStatus.FAIL -> "Insufficient focus, lighting, or coverage. Retake required."
+                        },
+                        fontSize = 11.5.sp,
+                        color = NeoInkSoft
+                    )
+                }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Space16))
 
-        // Quality Metrics Breakdown Section
-        Text(
-            text = "Automated Quality Assessment",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Text(
-            text = "4-point ophthalmic validation criteria before neural inference",
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-
-        Spacer(modifier = Modifier.height(10.dp))
-
-        // 1. Focus & Sharpness
-        QualityMetricCard(metric = qualityResult.focusMetric)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // 2. Illumination & Contrast
-        QualityMetricCard(metric = qualityResult.illuminationMetric)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // 3. Retinal Field Suitability
-        QualityMetricCard(metric = qualityResult.suitabilityMetric)
-        Spacer(modifier = Modifier.height(8.dp))
-
-        // 4. Resolution
-        QualityMetricCard(metric = qualityResult.resolutionMetric)
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        // Troubleshooting / Imaging Guidance Button
-        OutlinedButton(
-            onClick = onOpenGuidance,
-            modifier = Modifier
-                .fillMaxWidth()
-                .testTag("recapture_guidance_button")
+        // Quality Metrics Breakdown
+        NeoCard(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(Space16)
         ) {
-            Icon(imageVector = Icons.Default.HelpOutline, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text("Imaging & Recapture Guidance")
+            Text(
+                text = "Imaging Metrics Validation",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = NeoInk
+            )
+
+            Spacer(modifier = Modifier.height(Space8))
+
+            MetricRow(
+                label = "Focus & Sharpness",
+                score = qualityResult.focusMetric.score.toInt(),
+                status = qualityResult.focusMetric.status.name,
+                isPass = qualityResult.focusMetric.status == QualityStatus.PASS
+            )
+
+            Divider(color = NeoBorder, modifier = Modifier.padding(vertical = Space4))
+
+            MetricRow(
+                label = "Illumination & Uniformity",
+                score = qualityResult.illuminationMetric.score.toInt(),
+                status = qualityResult.illuminationMetric.status.name,
+                isPass = qualityResult.illuminationMetric.status == QualityStatus.PASS
+            )
+
+            Divider(color = NeoBorder, modifier = Modifier.padding(vertical = Space4))
+
+            MetricRow(
+                label = "Retinal Field Suitability",
+                score = qualityResult.suitabilityMetric.score.toInt(),
+                status = qualityResult.suitabilityMetric.status.name,
+                isPass = qualityResult.suitabilityMetric.status == QualityStatus.PASS
+            )
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
+        Spacer(modifier = Modifier.height(Space16))
 
-        // Primary Action Controls
-        Row(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
+        // Clinical Recommendation Card
+        NeoCard(
+            modifier = Modifier.fillMaxWidth(),
+            backgroundColor = NeoSurfaceSunk,
+            contentPadding = PaddingValues(Space16)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.TipsAndUpdates,
+                    contentDescription = null,
+                    tint = DrishtiBurgundy,
+                    modifier = Modifier.size(18.dp)
+                )
+                Spacer(modifier = Modifier.width(Space8))
+                Text(
+                    text = "Recommendation",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 12.5.sp,
+                    color = NeoInk
+                )
+            }
+            Spacer(modifier = Modifier.height(Space4))
+            val recText = if (qualityResult.guidanceMessages.isNotEmpty()) {
+                qualityResult.guidanceMessages.joinToString("\n• ", prefix = "• ")
+            } else {
+                qualityResult.suitabilityMetric.feedback
+            }
+            Text(
+                text = recText,
+                fontSize = 12.sp,
+                color = NeoInkSoft,
+                lineHeight = 16.sp
+            )
+
+            if (!canProceed) {
+                Spacer(modifier = Modifier.height(Space8))
+                TextButton(
+                    onClick = onOpenGuidance,
+                    modifier = Modifier.testTag("open_guidance_button")
+                ) {
+                    Text(
+                        text = "View Retake & Optical Positioning Guidelines",
+                        color = DrishtiBurgundy,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 11.5.sp
+                    )
+                }
+            }
+        }
+
+        Spacer(modifier = Modifier.height(Space16))
+
+        // Action Buttons
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(Space8)
+        ) {
+            if (canProceed) {
+                NeoPrimaryButton(
+                    text = "Proceed to AI Analysis",
+                    icon = Icons.Default.Check,
+                    onClick = onProceed,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .testTag("proceed_to_analysis_button")
+                )
+            }
+
+            NeoSecondaryButton(
+                text = if (canProceed) "Retake Image" else "Retake Required",
+                icon = Icons.Default.Refresh,
                 onClick = onRetake,
                 modifier = Modifier
-                    .weight(1f)
-                    .height(48.dp)
+                    .fillMaxWidth()
                     .testTag("retake_image_button")
-            ) {
-                Icon(imageVector = Icons.Default.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Retake Photo")
-            }
+            )
+        }
 
-            Spacer(modifier = Modifier.width(10.dp))
+        Spacer(modifier = Modifier.height(Space24))
+    }
+}
 
-            Button(
-                onClick = onProceed,
-                enabled = qualityResult.isAcceptableForAnalysis,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DrishtiPrimary,
-                    contentColor = Color.White
-                ),
-                modifier = Modifier
-                    .weight(1.3f)
-                    .height(48.dp)
-                    .testTag("proceed_analysis_button")
-            ) {
-                Icon(imageVector = Icons.Default.PlayArrow, contentDescription = null, modifier = Modifier.size(20.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text(
-                    text = if (qualityResult.overallStatus == QualityStatus.FAIL) "Quality Too Low" else "Run AI Analysis",
-                    fontWeight = FontWeight.Bold
-                )
-            }
+@Composable
+private fun MetricRow(label: String, score: Int, status: String, isPass: Boolean) {
+    val pillBg = if (isPass) Grade0Bg else Grade2Bg
+    val pillColor = if (isPass) Grade0Color else Grade2Color
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
+        Column {
+            Text(text = label, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, color = NeoInk)
+            Text(text = "Clinical Threshold Score: $score / 100", fontSize = 11.sp, color = NeoInkFaint)
+        }
+
+        Surface(
+            shape = RoundedCornerShape(999.dp),
+            color = pillBg,
+            border = BorderStroke(1.dp, pillColor.copy(alpha = 0.5f))
+        ) {
+            Text(
+                text = status,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.Bold,
+                color = pillColor,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+            )
         }
     }
 }

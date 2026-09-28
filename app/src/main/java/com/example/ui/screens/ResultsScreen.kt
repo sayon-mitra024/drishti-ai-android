@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.content.Context
 import android.content.Intent
 import android.graphics.Bitmap
 import androidx.compose.foundation.BorderStroke
@@ -22,11 +23,14 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.model.*
+import com.example.model.AnalysisResult
+import com.example.model.ClinicianReview
+import com.example.model.DiabeticRetinopathyGrade
+import com.example.model.PatientInfo
+import com.example.model.ReviewStatus
 import com.example.ui.GradCamDisplayMode
-import com.example.ui.components.GradCamViewer
-import com.example.ui.components.ProbabilityDistributionChart
-import com.example.ui.theme.DrishtiPrimary
+import com.example.ui.components.*
+import com.example.ui.theme.*
 
 @Composable
 fun ResultsScreen(
@@ -41,6 +45,7 @@ fun ResultsScreen(
     onDisplayModeChange: (GradCamDisplayMode) -> Unit,
     onToggleMarkers: () -> Unit,
     onOpenClinicianReview: () -> Unit,
+    onViewReport: () -> Unit = {},
     onNewScreening: () -> Unit,
     onViewHistory: () -> Unit,
     modifier: Modifier = Modifier
@@ -48,172 +53,152 @@ fun ResultsScreen(
     val context = LocalContext.current
     val grade = clinicianReview.assignedGrade ?: analysisResult.predictedGrade
 
+    val gradeColor = when (grade) {
+        DiabeticRetinopathyGrade.GRADE_0 -> Grade0Color
+        DiabeticRetinopathyGrade.GRADE_1 -> Grade1Color
+        DiabeticRetinopathyGrade.GRADE_2 -> Grade2Color
+        DiabeticRetinopathyGrade.GRADE_3 -> Grade3Color
+        DiabeticRetinopathyGrade.GRADE_4 -> Grade4Color
+    }
+
+    val gradeBg = when (grade) {
+        DiabeticRetinopathyGrade.GRADE_0 -> Grade0Bg
+        DiabeticRetinopathyGrade.GRADE_1 -> Grade1Bg
+        DiabeticRetinopathyGrade.GRADE_2 -> Grade2Bg
+        DiabeticRetinopathyGrade.GRADE_3 -> Grade3Bg
+        DiabeticRetinopathyGrade.GRADE_4 -> Grade4Bg
+    }
+
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(Color(0xFF090607))
+            .background(NeoBg)
             .verticalScroll(rememberScrollState())
-            .padding(16.dp)
+            .padding(horizontal = Space16, vertical = Space16)
     ) {
-        // Patient & Exam Summary Header
+        // Patient Header Strip
         Surface(
             shape = RoundedCornerShape(12.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant,
+            color = NeoSurface,
+            border = BorderStroke(1.dp, NeoBorder),
             modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 10.dp),
+                    .padding(horizontal = Space16, vertical = Space12),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Column {
-                    Text(
-                        text = patientInfo.fullName,
-                        fontWeight = FontWeight.Bold,
-                        style = MaterialTheme.typography.titleSmall
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Person,
+                        contentDescription = null,
+                        tint = DrishtiBurgundy,
+                        modifier = Modifier.size(16.dp)
                     )
+                    Spacer(modifier = Modifier.width(Space8))
                     Text(
-                        text = "ID: ${patientInfo.patientId} • Age: ${patientInfo.age} yrs • DM: ${patientInfo.diabetesDurationYears} yrs",
-                        fontSize = 11.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                        text = "${patientInfo.fullName} (${patientInfo.patientId})",
+                        fontWeight = FontWeight.Bold,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = NeoInk
                     )
                 }
 
                 Surface(
-                    shape = RoundedCornerShape(8.dp),
-                    color = DrishtiPrimary,
-                    contentColor = Color.White
+                    shape = RoundedCornerShape(6.dp),
+                    color = DrishtiRoseSubtle,
+                    border = BorderStroke(1.dp, DrishtiRoseBorder)
                 ) {
                     Text(
                         text = "EYE: ${patientInfo.eyeSide.name}",
-                        fontWeight = FontWeight.Black,
-                        fontSize = 12.sp,
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = DrishtiBurgundy,
+                        modifier = Modifier.padding(horizontal = Space8, vertical = Space4)
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(Space16))
 
-        // Main Result Severity Card
-        Card(
+        // PRIMARY HERO CARD: Predicted DR Grade & Severity (Visual Focus)
+        NeoCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(18.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = grade.severityColor.copy(alpha = 0.12f)
-            ),
-            border = BorderStroke(2.dp, grade.severityColor.copy(alpha = 0.6f))
+            backgroundColor = gradeBg,
+            borderColor = gradeColor.copy(alpha = 0.5f),
+            contentPadding = PaddingValues(Space16)
         ) {
-            Column(modifier = Modifier.padding(16.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            modifier = Modifier
-                                .size(12.dp)
-                                .clip(CircleShape)
-                                .background(grade.severityColor)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "ICDR CLASSIFICATION",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Black,
-                            color = grade.severityColor,
-                            letterSpacing = 0.8.sp
-                        )
-                    }
-
-                    // Confidence Pill
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = grade.severityColor.copy(alpha = 0.25f),
-                        contentColor = grade.severityColor
-                    ) {
-                        Text(
-                            text = "${(analysisResult.confidence * 100).toInt()}% Confidence",
-                            fontSize = 11.sp,
-                            fontWeight = FontWeight.Bold,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Text(
-                    text = grade.title,
-                    style = MaterialTheme.typography.headlineSmall,
+                    text = "AI-ASSISTED SCREENING RESULT",
+                    fontSize = 10.5.sp,
                     fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = gradeColor,
+                    letterSpacing = 0.8.sp
                 )
 
-                Text(
-                    text = grade.shortName,
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    color = grade.severityColor
-                )
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                Text(
-                    text = grade.description,
-                    fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.9f),
-                    lineHeight = 16.sp
-                )
-
-                Spacer(modifier = Modifier.height(12.dp))
-
-                // Referral Urgency Banner
                 Surface(
-                    shape = RoundedCornerShape(10.dp),
-                    color = if (grade.isReferable) Color(0xFFEF4444).copy(alpha = 0.16f) else Color(0xFF10B981).copy(alpha = 0.16f),
-                    border = BorderStroke(
-                        1.dp,
-                        if (grade.isReferable) Color(0xFFEF4444).copy(alpha = 0.5f) else Color(0xFF10B981).copy(alpha = 0.5f)
-                    ),
-                    modifier = Modifier.fillMaxWidth()
+                    shape = RoundedCornerShape(999.dp),
+                    color = gradeColor
                 ) {
-                    Row(
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = if (grade.isReferable) Icons.Default.Warning else Icons.Default.CheckCircle,
-                            contentDescription = null,
-                            tint = if (grade.isReferable) Color(0xFFEF4444) else Color(0xFF10B981),
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Column {
-                            Text(
-                                text = if (grade.isReferable) "REFERABLE DIABETIC RETINOPATHY" else "NON-REFERABLE STATUS",
-                                fontWeight = FontWeight.Black,
-                                fontSize = 11.sp,
-                                color = if (grade.isReferable) Color(0xFFEF4444) else Color(0xFF10B981)
-                            )
-                            Text(
-                                text = "Guideline Action: ${grade.followUpWindow}",
-                                fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
+                    Text(
+                        text = "GRADE ${grade.grade}",
+                        fontSize = 10.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = grade.title,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = NeoInk,
+                letterSpacing = (-0.5).sp
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = "Model Confidence: ${(analysisResult.confidence * 100).toInt()}%",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = gradeColor
+                )
+                Spacer(modifier = Modifier.width(10.dp))
+                Text(text = "•", color = NeoInkFaint)
+                Spacer(modifier = Modifier.width(10.dp))
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (grade.isReferable) Grade3Bg else Grade0Bg,
+                    border = BorderStroke(1.dp, if (grade.isReferable) Grade3Color.copy(alpha = 0.5f) else Grade0Color.copy(alpha = 0.5f))
+                ) {
+                    Text(
+                        text = if (grade.isReferable) "REFERABLE DR" else "NON-REFERABLE",
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = if (grade.isReferable) Grade3Color else Grade0Color,
+                        modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                    )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Space16))
 
-        // Grad-CAM Explainability Viewer
+        // Retinal Image / CAM Attention Viewer
         GradCamViewer(
             originalBitmap = originalBitmap,
             heatmapBitmap = analysisResult.gradCamBitmap,
@@ -226,256 +211,171 @@ fun ResultsScreen(
             onToggleMarkers = onToggleMarkers
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Space16))
 
-        // Probability Distribution
+        // 5-Class Probability Distribution
         ProbabilityDistributionChart(
             probabilities = analysisResult.probabilityDistribution,
-            predictedGrade = analysisResult.predictedGrade
+            predictedGrade = grade
         )
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Space16))
 
-        // Pathological Lesion Cues Card
-        if (analysisResult.lesionCues.isNotEmpty()) {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f)
-                ),
-                border = CardDefaults.outlinedCardBorder()
-            ) {
-                Column(modifier = Modifier.padding(14.dp)) {
-                    Text(
-                        text = "Detected Pathological Cues",
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Text(
-                        text = "Grad-CAM focal activations mapped to anatomical retinal structures",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-
-                    Spacer(modifier = Modifier.height(10.dp))
-
-                    analysisResult.lesionCues.forEach { cue ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(vertical = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .size(8.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        when (cue.type) {
-                                            "Microaneurysm" -> Color(0xFFEF4444)
-                                            "Hemorrhage" -> Color(0xFFDC2626)
-                                            "Hard Exudate" -> Color(0xFFFBBF24)
-                                            else -> Color(0xFF38BDF8)
-                                        }
-                                    )
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = cue.title,
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                                Text(
-                                    text = "Region: ${cue.region} • Severity: ${cue.severityLevel}",
-                                    fontSize = 11.sp,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            }
-                        }
-                    }
-                }
+        // Clinical Action Plan & Referral Recommendation
+        NeoCard(
+            modifier = Modifier.fillMaxWidth(),
+            contentPadding = PaddingValues(Space16)
+        ) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    imageVector = Icons.Default.MedicalServices,
+                    contentDescription = null,
+                    tint = DrishtiBurgundy,
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(Space8))
+                Text(
+                    text = "Clinical Action Plan",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold,
+                    color = NeoInk
+                )
             }
 
-            Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Space8))
+
+            Text(
+                text = grade.referralRecommendation,
+                fontSize = 12.5.sp,
+                color = NeoInk,
+                lineHeight = 17.sp
+            )
+
+            Spacer(modifier = Modifier.height(Space8))
+
+            grade.clinicalFindings.forEach { finding ->
+                Row(
+                    modifier = Modifier.padding(vertical = 2.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Check,
+                        contentDescription = null,
+                        tint = DrishtiBurgundy,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(Space8))
+                    Text(
+                        text = finding,
+                        fontSize = 11.5.sp,
+                        color = NeoInkSoft
+                    )
+                }
+            }
         }
 
-        // Referral & Clinical Recommendations Card
-        Card(
+        Spacer(modifier = Modifier.height(Space16))
+
+        // Clinician Review & Sign-Off Card
+        NeoCard(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-            border = CardDefaults.outlinedCardBorder()
+            backgroundColor = if (clinicianReview.status != ReviewStatus.PENDING) Grade0Bg else NeoSurfaceSunk,
+            borderColor = if (clinicianReview.status != ReviewStatus.PENDING) Grade0Color.copy(alpha = 0.5f) else NeoBorder,
+            contentPadding = PaddingValues(Space16)
         ) {
-            Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(
-                        imageVector = Icons.Default.MedicalServices,
+                        imageVector = Icons.Default.AssignmentInd,
                         contentDescription = null,
-                        tint = DrishtiPrimary,
+                        tint = if (clinicianReview.status != ReviewStatus.PENDING) Grade0Color else DrishtiBurgundy,
                         modifier = Modifier.size(20.dp)
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(Space8))
                     Text(
-                        text = "Clinical Action Plan",
-                        style = MaterialTheme.typography.titleMedium,
+                        text = "Clinician Oversight",
+                        style = MaterialTheme.typography.titleSmall,
                         fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.onSurface
+                        color = NeoInk
                     )
                 }
 
-                Spacer(modifier = Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(6.dp),
+                    color = if (clinicianReview.status != ReviewStatus.PENDING) Grade0Color else Grade1Color
+                ) {
+                    Text(
+                        text = clinicianReview.status.name,
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.ExtraBold,
+                        color = Color.White,
+                        modifier = Modifier.padding(horizontal = Space8, vertical = Space4)
+                    )
+                }
+            }
 
+            Spacer(modifier = Modifier.height(Space8))
+
+            if (clinicianReview.status != ReviewStatus.PENDING) {
                 Text(
-                    text = grade.referralRecommendation,
+                    text = "Reviewed & Signed by: ${clinicianReview.clinicianName}",
+                    fontWeight = FontWeight.Bold,
                     fontSize = 12.sp,
-                    color = MaterialTheme.colorScheme.onSurface,
-                    lineHeight = 16.sp
+                    color = NeoInk
                 )
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                grade.clinicalFindings.forEach { finding ->
-                    Row(
-                        modifier = Modifier.padding(vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Check,
-                            contentDescription = null,
-                            tint = DrishtiPrimary,
-                            modifier = Modifier.size(14.dp)
-                        )
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text(
-                            text = finding,
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
+                if (clinicianReview.clinicalNotes.isNotBlank()) {
+                    Spacer(modifier = Modifier.height(Space4))
+                    Text(
+                        text = "Notes: \"${clinicianReview.clinicalNotes}\"",
+                        fontSize = 11.5.sp,
+                        color = NeoInkSoft
+                    )
                 }
+            } else {
+                Text(
+                    text = "Awaiting verification and sign-off by a qualified ophthalmologist or optometrist.",
+                    fontSize = 11.5.sp,
+                    color = NeoInkSoft
+                )
             }
-        }
 
-        Spacer(modifier = Modifier.height(16.dp))
+            Spacer(modifier = Modifier.height(Space16))
 
-        // Clinician Review & Sign-Off Section
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = if (clinicianReview.status != ReviewStatus.PENDING) {
-                    Color(0xFF0F766E).copy(alpha = 0.15f)
-                } else {
-                    MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
-                }
-            ),
-            border = BorderStroke(
-                1.dp,
-                if (clinicianReview.status != ReviewStatus.PENDING) DrishtiPrimary.copy(alpha = 0.6f) else MaterialTheme.colorScheme.outline
+            NeoSecondaryButton(
+                text = if (clinicianReview.status != ReviewStatus.PENDING) "Modify Clinical Review" else "Sign Off as Clinician",
+                icon = if (clinicianReview.status != ReviewStatus.PENDING) Icons.Default.Edit else Icons.Default.Check,
+                onClick = onOpenClinicianReview,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("open_clinician_review_button")
             )
-        ) {
-            Column(modifier = Modifier.padding(14.dp)) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(
-                            imageVector = Icons.Default.AssignmentInd,
-                            contentDescription = null,
-                            tint = DrishtiPrimary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Clinician Oversight",
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = if (clinicianReview.status != ReviewStatus.PENDING) Color(0xFF10B981).copy(alpha = 0.2f) else Color(0xFFF59E0B).copy(alpha = 0.2f),
-                        contentColor = if (clinicianReview.status != ReviewStatus.PENDING) Color(0xFF10B981) else Color(0xFFF59E0B)
-                    ) {
-                        Text(
-                            text = clinicianReview.status.name,
-                            fontSize = 10.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            modifier = Modifier.padding(horizontal = 7.dp, vertical = 2.dp)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(8.dp))
-
-                if (clinicianReview.status != ReviewStatus.PENDING) {
-                    Text(
-                        text = "Reviewed & Signed by: ${clinicianReview.clinicianName}",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    if (clinicianReview.clinicianId.isNotBlank()) {
-                        Text(
-                            text = "Registration: ${clinicianReview.clinicianId}",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                    if (clinicianReview.clinicalNotes.isNotBlank()) {
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "Notes: \"${clinicianReview.clinicalNotes}\"",
-                            fontSize = 11.sp,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant
-                        )
-                    }
-                } else {
-                    Text(
-                        text = "Awaiting verification by a qualified ophthalmologist or retinal screening specialist.",
-                        fontSize = 12.sp,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-
-                Spacer(modifier = Modifier.height(10.dp))
-
-                Button(
-                    onClick = onOpenClinicianReview,
-                    colors = ButtonDefaults.buttonColors(
-                        containerColor = if (clinicianReview.status != ReviewStatus.PENDING) MaterialTheme.colorScheme.surfaceVariant else DrishtiPrimary,
-                        contentColor = if (clinicianReview.status != ReviewStatus.PENDING) MaterialTheme.colorScheme.onSurface else Color.White
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .testTag("open_clinician_review_button")
-                ) {
-                    Icon(
-                        imageVector = if (clinicianReview.status != ReviewStatus.PENDING) Icons.Default.Edit else Icons.Default.Check,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = if (clinicianReview.status != ReviewStatus.PENDING) "Modify Clinical Review" else "Sign Off as Clinician"
-                    )
-                }
-            }
         }
 
-        Spacer(modifier = Modifier.height(16.dp))
+        Spacer(modifier = Modifier.height(Space16))
 
-        // Export / Share & Action Buttons
-        Row(modifier = Modifier.fillMaxWidth()) {
-            OutlinedButton(
+        // Primary Actions
+        NeoPrimaryButton(
+            text = "View Screening Report & QR",
+            icon = Icons.Default.QrCode,
+            onClick = onViewReport,
+            modifier = Modifier
+                .fillMaxWidth()
+                .testTag("view_report_qr_button")
+        )
+
+        Spacer(modifier = Modifier.height(Space8))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(Space8)
+        ) {
+            NeoSecondaryButton(
+                text = "Share Report",
+                icon = Icons.Default.Share,
                 onClick = {
                     val shareIntent = Intent().apply {
                         action = Intent.ACTION_SEND
@@ -487,11 +387,9 @@ fun ResultsScreen(
                             Eye Examined: ${patientInfo.eyeSide.name}
                             ICDR Finding: ${grade.title} (${grade.shortName})
                             Confidence: ${(analysisResult.confidence * 100).toInt()}%
-                            Referable DR: ${if (grade.isReferable) "YES (Urgent Action)" else "NO (Routine Annual Follow-up)"}
+                            Referable DR: ${if (grade.isReferable) "YES (Action Required)" else "NO (Annual Follow-up)"}
                             Action Plan: ${grade.referralRecommendation}
                             Clinician Status: ${clinicianReview.status.name} (${clinicianReview.clinicianName.ifBlank { "Unsigned" }})
-                            
-                            *AI-assisted screening support tool, not a diagnostic device. Requires qualified clinical oversight.*
                             """.trimIndent()
                         )
                         type = "text/plain"
@@ -501,28 +399,19 @@ fun ResultsScreen(
                 modifier = Modifier
                     .weight(1f)
                     .testTag("share_report_button")
-            ) {
-                Icon(imageVector = Icons.Default.Share, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("Share Report")
-            }
+            )
 
-            Spacer(modifier = Modifier.width(8.dp))
-
-            Button(
+            NeoSecondaryButton(
+                text = "New Patient",
+                icon = Icons.Default.Add,
                 onClick = onNewScreening,
-                colors = ButtonDefaults.buttonColors(containerColor = DrishtiPrimary),
                 modifier = Modifier
                     .weight(1f)
                     .testTag("new_screening_button")
-            ) {
-                Icon(imageVector = Icons.Default.Add, contentDescription = null, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(6.dp))
-                Text("New Patient")
-            }
+            )
         }
 
-        Spacer(modifier = Modifier.height(10.dp))
+        Spacer(modifier = Modifier.height(Space8))
 
         TextButton(
             onClick = onViewHistory,
@@ -530,9 +419,21 @@ fun ResultsScreen(
                 .fillMaxWidth()
                 .testTag("view_all_history_button")
         ) {
-            Icon(imageVector = Icons.Default.History, contentDescription = null, modifier = Modifier.size(16.dp))
-            Spacer(modifier = Modifier.width(6.dp))
-            Text("View All Stored Screenings in Room Database")
+            Icon(
+                imageVector = Icons.Default.History,
+                contentDescription = null,
+                tint = DrishtiBurgundy,
+                modifier = Modifier.size(16.dp)
+            )
+            Spacer(modifier = Modifier.width(Space8))
+            Text(
+                text = "View Stored Screenings in Room Database",
+                color = DrishtiBurgundy,
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 12.sp
+            )
         }
+
+        Spacer(modifier = Modifier.height(Space24))
     }
 }

@@ -4,7 +4,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
@@ -16,42 +15,45 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
-import com.example.ui.theme.DrishtiPrimary
+import androidx.compose.ui.window.DialogProperties
+import com.example.ui.theme.*
 
 @Composable
 fun RecaptureGuidanceDialog(
     onDismiss: () -> Unit,
     onRetakeNow: () -> Unit
 ) {
-    Dialog(onDismissRequest = onDismiss) {
-        Card(
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        NeoCard(
             modifier = Modifier
-                .fillMaxWidth()
+                .fillMaxWidth(0.95f)
+                .fillMaxHeight(0.85f)
                 .padding(vertical = 16.dp),
-            shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+            shapeRadius = 22.dp
         ) {
             Column(
                 modifier = Modifier
-                    .padding(20.dp)
+                    .fillMaxSize()
                     .verticalScroll(rememberScrollState())
             ) {
                 Text(
-                    text = "Fundus Imaging Protocol & Guidance",
+                    text = "Imaging Protocol & Guidance",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.onSurface
+                    color = NeoInk
                 )
                 Text(
-                    text = "Ensure reliable AI classification with clinical-grade input",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                    text = "Achieving optimal optical quality for AI screening",
+                    fontSize = 12.sp,
+                    color = NeoInkSoft
                 )
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -59,7 +61,7 @@ fun RecaptureGuidanceDialog(
                 GuidanceStep(
                     icon = Icons.Default.CenterFocusStrong,
                     title = "1. Pupil Alignment & Fixation",
-                    description = "Position the patient's forehead firmly on the chinrest. Instruct them to fixate steadily on the green internal cross/target. Align the optical objective lens directly with the pupil entrance."
+                    description = "Position patient with forehead firmly against headrest. Instruct patient to fixate steadily on the optical center target."
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -67,15 +69,15 @@ fun RecaptureGuidanceDialog(
                 GuidanceStep(
                     icon = Icons.Default.Lightbulb,
                     title = "2. Illumination & Glare Prevention",
-                    description = "Dim ambient examination room lighting. If illumination is insufficient or pupil is small (< 3.5mm), wait 3-5 minutes for dark adaptation. Avoid corneal crescent reflections by centering the working distance."
+                    description = "Dim ambient examination room lighting. Wait 3-5 minutes for physiological dark adaptation. Re-angle lens slightly if crescent reflections appear."
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 GuidanceStep(
                     icon = Icons.Default.RemoveRedEye,
-                    title = "3. Focus & Diopter Compensation",
-                    description = "Adjust the diopter correction wheel until retinal blood vessels and foveal reflex appear tack-sharp. Prevent patient blinking by asking them to blink once right before image trigger."
+                    title = "3. Focus & Saccade Reduction",
+                    description = "Ensure vascular arcades and foveal reflex appear tack-sharp. Ask patient to blink once gently right before camera trigger."
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -83,7 +85,7 @@ fun RecaptureGuidanceDialog(
                 GuidanceStep(
                     icon = Icons.Default.CameraAlt,
                     title = "4. Coverage & Field of View",
-                    description = "Ensure standard 45° macular-centered or optic disc-centered field. The circular retina should occupy at least 65-80% of the sensor frame."
+                    description = "Maintain standard 45° macular or disc-centered field. The retinal circular boundary should occupy at least 70% of sensor frame."
                 )
 
                 Spacer(modifier = Modifier.height(20.dp))
@@ -92,18 +94,20 @@ fun RecaptureGuidanceDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.End
                 ) {
-                    TextButton(onClick = onDismiss) {
-                        Text("Close")
-                    }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Button(
+                    NeoSecondaryButton(
+                        text = "Close",
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f)
+                    )
+
+                    Spacer(modifier = Modifier.width(10.dp))
+
+                    NeoPrimaryButton(
+                        text = "Retake Photo",
+                        icon = Icons.Default.CameraAlt,
                         onClick = onRetakeNow,
-                        colors = ButtonDefaults.buttonColors(containerColor = DrishtiPrimary)
-                    ) {
-                        Icon(imageVector = Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.size(16.dp))
-                        Spacer(modifier = Modifier.width(6.dp))
-                        Text("Retake Photo")
-                    }
+                        modifier = Modifier.weight(1.3f)
+                    )
                 }
             }
         }
@@ -124,29 +128,29 @@ private fun GuidanceStep(
             modifier = Modifier
                 .size(32.dp)
                 .clip(CircleShape)
-                .background(DrishtiPrimary.copy(alpha = 0.15f)),
+                .background(DrishtiRoseSubtle),
             contentAlignment = Alignment.Center
         ) {
             Icon(
                 imageVector = icon,
                 contentDescription = null,
-                tint = DrishtiPrimary,
-                modifier = Modifier.size(18.dp)
+                tint = DrishtiBurgundy,
+                modifier = Modifier.size(16.dp)
             )
         }
-        Spacer(modifier = Modifier.width(12.dp))
+        Spacer(modifier = Modifier.width(10.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
                 fontWeight = FontWeight.Bold,
-                fontSize = 13.sp,
-                color = MaterialTheme.colorScheme.onSurface
+                fontSize = 12.5.sp,
+                color = NeoInk
             )
             Spacer(modifier = Modifier.height(2.dp))
             Text(
                 text = description,
-                fontSize = 12.sp,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                fontSize = 11.5.sp,
+                color = NeoInkSoft,
                 lineHeight = 16.sp
             )
         }

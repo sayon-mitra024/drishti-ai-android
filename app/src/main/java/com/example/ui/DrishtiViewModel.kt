@@ -20,6 +20,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import org.json.JSONObject
 import java.io.File
 
 enum class ScreenStep {
@@ -28,7 +29,8 @@ enum class ScreenStep {
     ANALYSIS_RUNNING,
     RESULTS,
     HISTORY,
-    GUIDELINES
+    GUIDELINES,
+    ABOUT
 }
 
 enum class GradCamDisplayMode {
@@ -57,6 +59,9 @@ data class UiState(
     val isRecaptureDialogOpen: Boolean = false,
     val savedScreeningId: Long? = null,
     val selectedHistoryScreening: ScreeningEntity? = null,
+    val isReportDialogOpen: Boolean = false,
+    val activeReport: com.example.report.ScreeningReport? = null,
+    val isQrScannerDialogOpen: Boolean = false,
     val errorMessage: String? = null
 )
 
@@ -149,8 +154,11 @@ class DrishtiViewModel(application: Application) : AndroidViewModel(application)
                 // Persist screening to Room Database
                 val quality = _uiState.value.qualityResult
                 val patient = _uiState.value.patientInfo
-                val probabilitiesJson = result.probabilityDistribution.entries
-                    .joinToString(",") { "${it.key.grade}:${String.format("%.3f", it.value)}" }
+                val probJsonObject = JSONObject()
+                result.probabilityDistribution.forEach { (grade, prob) ->
+                    probJsonObject.put(grade.grade.toString(), prob.toDouble())
+                }
+                val probabilitiesJson = probJsonObject.toString()
 
                 val entity = ScreeningEntity(
                     patientId = patient.patientId,
@@ -284,8 +292,169 @@ class DrishtiViewModel(application: Application) : AndroidViewModel(application)
         _uiState.value = _uiState.value.copy(selectedHistoryScreening = null)
     }
 
+    fun showReportForScreening(screening: ScreeningEntity) {
+        val report = com.example.report.ScreeningReport.fromEntity(screening)
+        _uiState.value = _uiState.value.copy(
+            activeReport = report,
+            isReportDialogOpen = true
+        )
+    }
+
+    fun showReportForCurrentResult() {
+        val currentAnalysis = _uiState.value.analysisResult ?: return
+        val id = _uiState.value.savedScreeningId ?: 1L
+        viewModelScope.launch {
+            val existing = repository.getScreeningById(id)
+            val report = if (existing != null) {
+                com.example.report.ScreeningReport.fromEntity(existing)
+            } else {
+                val patient = _uiState.value.patientInfo
+                val quality = _uiState.value.qualityResult
+                val review = _uiState.value.clinicianReview
+                val probMap = currentAnalysis.probabilityDistribution.mapKeys { it.key.grade }
+                val dateFormat = java.text.SimpleDateFormat("dd MMM yyyy, HH:mm:ss", java.util.Locale.getDefault())
+                com.example.report.ScreeningReport(
+                    reportId = "DRISHTI-RPT-${id.toString().padStart(5, '0')}",
+                    screeningDbId = id,
+                    timestamp = System.currentTimeMillis(),
+                    formattedDateTime = dateFormat.format(java.util.Date()),
+                    patientId = patient.patientId,
+                    patientName = patient.fullName,
+                    patientAge = patient.age,
+                    eyeSide = patient.eyeSide.name,
+                    predictedGrade = currentAnalysis.predictedGrade.grade,
+                    gradeTitle = currentAnalysis.predictedGrade.title,
+                    confidence = currentAnalysis.confidence,
+                    isReferable = currentAnalysis.predictedGrade.isReferable,
+                    probabilities = probMap,
+                    qualityStatus = quality?.overallStatus?.name ?: "PASS",
+                    focusScore = quality?.focusMetric?.score ?: 90f,
+                    illuminationScore = quality?.illuminationMetric?.score ?: 90f,
+                    reviewStatus = review.status.name,
+                    clinicianName = review.clinicianName,
+                    clinicianNotes = review.clinicalNotes,
+                    clinicianAssignedGrade = review.assignedGrade?.grade,
+                    reviewTimestamp = review.reviewTimestamp
+                )
+            }
+            _uiState.value = _uiState.value.copy(
+                activeReport = report,
+                isReportDialogOpen = true
+            )
+        }
+    }
+
+    fun dismissReportDialog() {
+        _uiState.value = _uiState.value.copy(isReportDialogOpen = false, activeReport = null)
+    }
+
+    fun showQrScannerDialog(show: Boolean) {
+        _uiState.value = _uiState.value.copy(isQrScannerDialogOpen = show)
+    }
+
+    fun openStoredScreening(screening: ScreeningEntity) {
+        viewModelScope.launch {
+            var bitmap: Bitmap? = null
+            if (screening.imagePath.isNotBlank()) {
+                val file = File(screening.imagePath)
+                if (file.exists()) {
+                    bitmap = BitmapFactory.decodeFile(file.absolutePath)
+                }
+            }
+
+            val probMap = mutableMapOf<DiabeticRetinopathyGrade, Float>()
+            try {
+                if (screening.probabilitiesJson.startsWith("{")) {
+                    val json = JSONObject(screening.probabilitiesJson)
+                    val keys = json.keys()
+                    while (keys.hasNext()) {
+                        val k = keys.next()
+                        val gradeInt = k.toIntOrNull()
+                        if (gradeInt != null) {
+                            probMap[DiabeticRetinopathyGrade.fromGrade(gradeInt)] = json.getDouble(k).toFloat()
+                        }
+                    }
+                } else {
+                    screening.probabilitiesJson.split(",").forEach { pair ->
+                        val parts = pair.split(":")
+                        if (parts.size == 2) {
+                            val g = parts[0].trim().toIntOrNull()
+                            val p = parts[1].trim().toFloatOrNull()
+                            if (g != null && p != null) {
+                                probMap[DiabeticRetinopathyGrade.fromGrade(g)] = p
+                            }
+                        }
+                    }
+                }
+            } catch (_: Exception) {}
+
+            if (probMap.isEmpty()) {
+                val g = DiabeticRetinopathyGrade.fromGrade(screening.predictedGrade)
+                probMap[g] = screening.confidence
+            }
+
+            val patient = PatientInfo(
+                patientId = screening.patientId,
+                fullName = screening.patientName,
+                age = screening.patientAge,
+                eyeSide = try { EyeSide.valueOf(screening.eyeSide) } catch (_: Exception) { EyeSide.OD }
+            )
+
+            val review = ClinicianReview(
+                status = try { ReviewStatus.valueOf(screening.reviewStatus) } catch (_: Exception) { ReviewStatus.PENDING },
+                clinicianName = screening.clinicianName ?: "",
+                clinicalNotes = screening.clinicianNotes ?: "",
+                assignedGrade = screening.clinicianAssignedGrade?.let { DiabeticRetinopathyGrade.fromGrade(it) },
+                reviewTimestamp = screening.reviewTimestamp ?: 0L
+            )
+
+            val storedCamBitmap = if (!screening.gradCamPath.isNullOrBlank()) {
+                try {
+                    BitmapFactory.decodeFile(screening.gradCamPath)
+                } catch (_: Exception) {
+                    null
+                }
+            } else null
+
+            val result = AnalysisResult(
+                predictedGrade = DiabeticRetinopathyGrade.fromGrade(screening.predictedGrade),
+                confidence = screening.confidence,
+                probabilityDistribution = probMap,
+                lesionCues = emptyList(),
+                gradCamBitmap = storedCamBitmap,
+                executionTimeMs = 0L,
+                inferenceEngineName = "Drishti ONNX Runtime (Stored Result)"
+            )
+
+            _uiState.value = _uiState.value.copy(
+                patientInfo = patient,
+                capturedBitmap = bitmap,
+                localImagePath = screening.imagePath,
+                analysisResult = result,
+                clinicianReview = review,
+                savedScreeningId = screening.id,
+                currentStep = ScreenStep.RESULTS
+            )
+        }
+    }
+
     fun deleteScreening(id: Long) {
         viewModelScope.launch {
+            val existing = repository.getScreeningById(id)
+            if (existing != null) {
+                try {
+                    if (existing.imagePath.isNotBlank()) {
+                        val file = File(existing.imagePath)
+                        if (file.exists()) file.delete()
+                    }
+                    if (!existing.gradCamPath.isNullOrBlank()) {
+                        val file = File(existing.gradCamPath)
+                        if (file.exists()) file.delete()
+                    }
+                } catch (e: Exception) {
+                    e.printStackTrace()
+                }
+            }
             repository.deleteScreening(id)
             if (_uiState.value.selectedHistoryScreening?.id == id) {
                 _uiState.value = _uiState.value.copy(selectedHistoryScreening = null)
