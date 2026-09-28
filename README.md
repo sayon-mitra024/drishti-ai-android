@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="app/src/main/res/drawable/logo.png" alt="Drishti AI logo" width="140" />
+  <img src="app/src/main/res/drawable/drishti_logo.png" alt="Drishti AI logo" width="340" />
 </p>
 
 <h1 align="center">Drishti AI Android</h1>
